@@ -1,6 +1,5 @@
 import os
 import requests
-import logging
 import time
 from datetime import datetime
 
@@ -11,7 +10,7 @@ from deta import Deta
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 BOT_URL = f"https://api.telegram.org/bot{BOT_TOKEN}"
-ALLOWED_USERNAMES = os.getenv("ALLOWED_USERNAMES").split(" ")
+ALLOWED_USERNAMES = os.getenv("ALLOWED_USERNAMES", "").split(" ")
 
 deta = Deta()
 usersdb = deta.Base("users")
@@ -27,7 +26,6 @@ def is_allowed_user(username):
 
 def user_exists(username):
     response = usersdb.fetch({"username": username})
-    logging.warn(response.count)
     return response.count > 0
 
 async def verify_user_exists(update):
@@ -158,28 +156,22 @@ async def select_reward(update, context):
         await update.message.reply_text("Please select a reward to redeem:", reply_markup=reply_markup)
 
 async def button(update: Update, context) -> None:
-    if not await user_exists(update.callback_query.from_user.username):
+    if not user_exists(update.callback_query.from_user.username):
         return
 
     if update.callback_query.data == "cancel":
         await update.callback_query.edit_message_text("Cancelled")
         return
     
-    response = rewardsdb.fetch({"key": update.callback_query.data})
-    logging.warn(response)
-    logging.warn(response.items)
-    reward = response.items[0]
+    reward = rewardsdb.get(update.callback_query.data)
     await update.callback_query.edit_message_text(f"Are you sure you want to redeem '{reward['reward_name']}' for {reward['cost']} points?", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("Yes", callback_data=f"confirm_{reward['key']}"), InlineKeyboardButton("No", callback_data="cancel")]]))
     
 async def confirm_redeem(update: Update, context) -> None:
-    if not await user_exists(update.callback_query.from_user.username):
+    if not user_exists(update.callback_query.from_user.username):
         return
 
     reward_key = update.callback_query.data.split("_")[1]
-    rewards = rewardsdb.fetch({"key": reward_key})
-    logging.warn(rewards)
-    logging.warn(rewards.items)
-    reward = rewards.items[0]
+    reward = rewardsdb.get(reward_key)
     user = usersdb.fetch({"username": update.callback_query.from_user.username}).items[0]
     if user["points"] < reward["cost"]:
         await update.callback_query.edit_message_text("You don't have enough points 😔")

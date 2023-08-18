@@ -207,7 +207,6 @@ app = FastAPI()
 @app.post("/telegram")
 async def telegram_webhook(req: Request):
     data = await req.json()
-    logging.warn(data)
     async with telegram_app:
         await telegram_app.process_update(Update.de_json(data, telegram_app.bot))
 

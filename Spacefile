@@ -1,0 +1,16 @@
+# Spacefile Docs: https://go.deta.dev/docs/spacefile/v0
+v: 0
+micros:
+  - name: fast-api-bot
+    src: .
+    engine: python3.9
+    primary: true
+    run: uvicorn main:app --host 0.0.0.0 --port $PORT
+    dev: uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+    public: true
+    presets:
+      env:
+        - name: TELEGRAM_BOT_TOKEN
+          description: Telegram bot token
+        - name: ALLOWED_USERNAMES
+          description: Space-delimited list of the telegram usernames of users allowed to use the bot
